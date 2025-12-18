@@ -58,17 +58,28 @@ app.get('/api/menu', async (req, res) => {
 // POST create new order
 app.post('/api/orders', async (req, res) => {
   try {
+    console.log('Received order request:', JSON.stringify(req.body, null, 2));
+    
     const { items, customerInfo, notes } = req.body;
+
+    if (!items || items.length === 0) {
+      console.error('No items in order');
+      return res.status(400).json({ message: 'Order must contain at least one item' });
+    }
 
     let totalAmount = 0;
     const orderItems = [];
 
     for (const item of items) {
+      console.log('Processing item:', item);
+      
       const menuItem = await MenuItem.findById(item.menuItemId || item._id);
       if (!menuItem) {
+        console.error(`Menu item not found: ${item.menuItemId || item._id}`);
         return res.status(404).json({ message: `Menu item not found: ${item.name}` });
       }
       if (!menuItem.available) {
+        console.error(`Menu item not available: ${item.name}`);
         return res.status(400).json({ message: `Menu item not available: ${item.name}` });
       }
 
@@ -90,6 +101,8 @@ app.post('/api/orders', async (req, res) => {
     });
 
     const savedOrder = await newOrder.save();
+    console.log('Order saved successfully:', savedOrder.orderNumber);
+    
     res.status(201).json({
       message: 'Order placed successfully',
       order: savedOrder
