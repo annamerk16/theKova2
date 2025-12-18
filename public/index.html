@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Kova - Your Local Coffee, Breakfast, Brunch Spot</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 1s ease-out;
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // API Configuration (works for both local and production)
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5001/api' 
+          : '/api';
+        
+        // Icon Components
+        const ShoppingCart = () => <span>🛒</span>;
+        const X = () => <span>✕</span>;
+        const Plus = () => <span>+</span>;
+        const Minus = () => <span>−</span>;
+        const Loader = () => <div className="animate-spin text-4xl">⌛</div>;
+
+        // Navigation Component
+        const Navigation = ({ cartCount, onCartToggle }) => {
+          const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+          return (
+            <header className="fixed top-0 w-full bg-amber-50 shadow-md z-50">
+              <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                  <div className="text-2xl font-bold text-amber-600">The Kova</div>
+                  
+                  <ul className="hidden md:flex space-x-8">
+                    <li><a href="#home" className="text-amber-600 hover:text-amber-700 font-medium transition">Home</a></li>
+                    <li><a href="#menu" className="text-amber-600 hover:text-amber-700 font-medium transition">Menu</a></li>
+                    <li><a href="#about" className="text-amber-600 hover:text-amber-700 font-medium transition">About</a></li>
+                    <li><a href="#contact" className="text-amber-600 hover:text-amber-700 font-medium transition">Contact</a></li>
+                  </ul>
+
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={onCartToggle}
+                      className="relative text-amber-600 hover:scale-110 transition-transform text-2xl"
+                    >
+                      <ShoppingCart />
+                      {cartCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          {cartCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <button 
+                      onClick={() => setIsMenuOpen(!isMenuOpen)}
+                      className="md:hidden text-amber-600 text-2xl"
+                    >
+                      ☰
+                    </button>
+                  </div>
+                </div>
+
+                {isMenuOpen && (
+                  <ul className="md:hidden pb-4 space-y-2">
+                    <li><a href="#home" className="block text-amber-600 hover:text-amber-700 py-2" onClick={() => setIsMenuOpen(false)}>Home</a></li>
+                    <li><a href="#menu" className="block text-amber-600 hover:text-amber-700 py-2" onClick={() => setIsMenuOpen(false)}>Menu</a></li>
+                    <li><a href="#about" className="block text-amber-600 hover:text-amber-700 py-2" onClick={() => setIsMenuOpen(false)}>About</a></li>
+                    <li><a href="#contact" className="block text-amber-600 hover:text-amber-700 py-2" onClick={() => setIsMenuOpen(false)}>Contact</a></li>
+                  </ul>
+                )}
+              </nav>
+            </header>
+          );
+        };
+
+        // Hero Section
+        const Hero = () => {
+          return (
+            <section id="home" className="h-screen flex items-center justify-center text-center text-white bg-cover bg-center relative mt-16" 
+              style={{backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://thekovanyc.com/photos/interior.JPG')"}}>
+              <div className="animate-fade-in-up">
+                <h1 className="text-5xl md:text-6xl font-bold mb-4">The Kova</h1>
+                <p className="text-xl md:text-2xl text-amber-300">Your Local Coffee, Breakfast, Brunch Spot</p>
+              </div>
+            </section>
+          );
+        };
+
+        // Menu Section with API Integration
+        const MenuSection = ({ onAddToCart }) => {
+          const [menuCategories, setMenuCategories] = useState([]);
+          const [loading, setLoading] = useState(true);
+          const [error, setError] = useState(null);
+
+          useEffect(() => {
+            fetchMenu();
+          }, []);
+
+          const fetchMenu = async () => {
+            try {
+              setLoading(true);
+              const response = await fetch(`${API_BASE_URL}/menu`);
+              if (!response.ok) {
+                throw new Error('Failed to fetch menu');
+              }
+              const data = await response.json();
+              setMenuCategories(data);
+              setError(null);
+            } catch (err) {
+              console.error('Error fetching menu:', err);
+              setError('Unable to load menu. Make sure the backend server is running on port 5000.');
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          if (loading) {
+            return (
+              <section id="menu" className="py-16 px-4 bg-gray-50">
+                <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Our Menu</h2>
+                <div className="flex flex-col justify-center items-center h-64">
+                  <Loader />
+                  <p className="mt-4 text-gray-600">Loading menu...</p>
+                </div>
+              </section>
+            );
+          }
+
+          if (error) {
+            return (
+              <section id="menu" className="py-16 px-4 bg-gray-50">
+                <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Our Menu</h2>
+                <div className="max-w-2xl mx-auto text-center bg-red-50 p-8 rounded-lg border-2 border-red-200">
+                  <p className="text-red-600 mb-4 text-lg">{error}</p>
+                  <p className="text-sm text-gray-600 mb-4">Make sure to:</p>
+                  <ul className="text-left text-sm text-gray-600 mb-6 space-y-2">
+                    <li>✓ Start MongoDB: <code className="bg-gray-200 px-2 py-1 rounded">mongod</code></li>
+                    <li>✓ Start backend: <code className="bg-gray-200 px-2 py-1 rounded">npm run dev</code></li>
+                    <li>✓ Seed database: <code className="bg-gray-200 px-2 py-1 rounded">npm run seed</code></li>
+                  </ul>
+                  <button 
+                    onClick={fetchMenu}
+                    className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
+              </section>
+            );
+          }
+
+          return (
+            <section id="menu" className="py-16 px-4 bg-gray-50">
+              <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Our Menu</h2>
+              <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {menuCategories.map((category, idx) => (
+                  <div key={idx} className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition">
+                    <h3 className="text-2xl font-bold text-amber-600 mb-4 pb-2 border-b-2 border-amber-600">
+                      {category.name}
+                    </h3>
+                    <div className="space-y-3">
+                      {category.items.map((item, itemIdx) => (
+                        <div key={itemIdx} className="border-b border-gray-200 pb-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium">{item.name}</span>
+                            <span className="text-amber-600 font-bold">${item.price.toFixed(2)}</span>
+                          </div>
+                          {item.description && (
+                            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                          )}
+                          <button 
+                            onClick={() => onAddToCart(item)}
+                            className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition font-semibold text-sm"
+                          >
+                            Add to Cart
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        };
+
+        // Shopping Cart Component
+        const ShoppingCartComponent = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, onClear, onCheckout }) => {
+          const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+          if (!isOpen) return null;
+
+          return (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+              <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col">
+                <div className="bg-amber-50 p-6 border-b-2 border-amber-600 flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-amber-600">Your Cart</h2>
+                  <button onClick={onClose} className="text-amber-600 hover:rotate-90 transition-transform text-3xl">
+                    <X />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6">
+                  {cart.length === 0 ? (
+                    <p className="text-center text-gray-400 italic mt-8">Your cart is empty</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {cart.map((item, idx) => (
+                        <div key={idx} className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-600">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <div className="font-semibold">{item.name}</div>
+                              <div className="text-amber-600 font-bold">${item.price.toFixed(2)} each</div>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2 bg-white rounded-lg p-1">
+                              <button 
+                                onClick={() => onUpdateQuantity(idx, -1)}
+                                disabled={item.quantity === 1}
+                                className="bg-amber-600 text-white w-7 h-7 rounded hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                              >
+                                <Minus />
+                              </button>
+                              <span className="w-8 text-center font-bold">{item.quantity}</span>
+                              <button 
+                                onClick={() => onUpdateQuantity(idx, 1)}
+                                className="bg-amber-600 text-white w-7 h-7 rounded hover:bg-amber-700 transition"
+                              >
+                                <Plus />
+                              </button>
+                            </div>
+                            <button 
+                              onClick={() => onRemove(idx)}
+                              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-semibold"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-amber-50 p-6 border-t-2 border-amber-600">
+                  <div className="flex justify-between text-xl font-bold mb-4 pb-4 border-b-2 border-amber-600">
+                    <span>Total:</span>
+                    <span className="text-amber-600">${total.toFixed(2)}</span>
+                  </div>
+                  {cart.length > 0 && (
+                    <>
+                      <button 
+                        onClick={onClear}
+                        className="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition font-semibold mb-3"
+                      >
+                        Clear Cart
+                      </button>
+                      <button 
+                        onClick={onCheckout}
+                        className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition font-semibold text-lg"
+                      >
+                        Checkout
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        // Checkout Modal
+        const CheckoutModal = ({ isOpen, onClose, cart, total, onSubmitOrder }) => {
+          const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', phone: '' });
+          const [notes, setNotes] = useState('');
+          const [isSubmitting, setIsSubmitting] = useState(false);
+
+          if (!isOpen) return null;
+
+          const handleSubmit = async (e) => {
+            e.preventDefault();
+            setIsSubmitting(true);
+            await onSubmitOrder(customerInfo, notes);
+            setIsSubmitting(false);
+          };
+
+          return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+              <div className="relative bg-white rounded-xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl">
+                  <X />
+                </button>
+
+                <h2 className="text-2xl font-bold text-amber-600 mb-6">Complete Your Order</h2>
+
+                <div className="mb-6 bg-amber-50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Order Summary</h3>
+                  {cart.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm mb-1">
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-amber-600 mt-2 pt-2 flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span className="text-amber-600">${total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Name *</label>
+                    <input type="text" required value={customerInfo.name}
+                      onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email *</label>
+                    <input type="email" required value={customerInfo.email}
+                      onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Phone *</label>
+                    <input type="tel" required value={customerInfo.phone}
+                      onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Special Instructions (Optional)</label>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent"
+                      placeholder="Any dietary restrictions or special requests?" />
+                  </div>
+
+                  <button type="submit" disabled={isSubmitting}
+                    className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition font-semibold text-lg disabled:bg-gray-400">
+                    {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        };
+
+        // Order Confirmation Modal
+        const OrderConfirmationModal = ({ isOpen, onClose, orderNumber }) => {
+          if (!isOpen) return null;
+
+          return (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70" />
+              <div className="relative bg-white rounded-xl p-8 max-w-md w-full text-center">
+                <div className="text-6xl mb-4">✅</div>
+                <h2 className="text-2xl font-bold text-green-600 mb-4">Order Placed Successfully!</h2>
+                <p className="text-gray-700 mb-2">Thank you for your order.</p>
+                <p className="text-sm text-gray-600 mb-6">
+                  Your order number is: <span className="font-bold text-amber-600">{orderNumber}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-6">We'll have your delicious food ready soon!</p>
+                <button onClick={onClose}
+                  className="bg-amber-600 text-white px-8 py-3 rounded-lg hover:bg-amber-700 transition font-semibold">
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        };
+
+        // Footer
+        // About Section
+        const About = () => (
+          <section id="about" className="py-16 px-4 bg-white">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-4xl font-bold text-amber-600 mb-8">About The Kova</h2>
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                Welcome to The Kova, your neighborhood destination for exceptional coffee, hearty breakfasts, and delightful brunch experiences. 
+                Located in the heart of Staten Island, we pride ourselves on serving fresh, delicious food made with love and the finest ingredients.
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed">
+                From our signature lattes to our famous Caribbean-style roti, every dish tells a story. 
+                Whether you're looking for a quick morning pick-me-up or a leisurely brunch with friends, 
+                The Kova is the perfect spot to relax, refuel, and reconnect.
+              </p>
+            </div>
+          </section>
+        );
+
+        // Contact Section
+        const Contact = () => (
+          <section id="contact" className="py-16 px-4 bg-gray-50">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Get In Touch</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-amber-600 mb-4">Visit Us</h3>
+                  <p className="text-gray-700 mb-2">📍 1775B Richmond Rd</p>
+                  <p className="text-gray-700 mb-4">Staten Island, NY 10306</p>
+                  <p className="text-gray-700 mb-2">📞 (646) 577-5500</p>
+                  <p className="text-gray-700">✉️ thekovanyc@gmail.com</p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-amber-600 mb-4">Hours</h3>
+                  <ul className="space-y-2 text-gray-700">
+                    <li className="flex justify-between">
+                      <span>Monday</span>
+                      <span className="font-semibold">9am - 4pm</span>
+                    </li>
+                    <li className="flex justify-between text-red-600">
+                      <span>Tuesday</span>
+                      <span className="font-semibold">Closed</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span>Wed - Sun</span>
+                      <span className="font-semibold">9am - 4pm</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+
+        const Footer = () => (
+          <footer className="bg-amber-50 text-gray-800 py-12 px-4">
+            <div className="max-w-7xl mx-auto text-center">
+              <h3 className="text-xl font-bold text-amber-600 mb-4">The Kova</h3>
+              <p>1775B Richmond Rd, Staten Island, NY 10306</p>
+              <p>Phone: (646) 577-5500 | Email: thekovanyc@gmail.com</p>
+            </div>
+          </footer>
+        );
+
+        // Main App
+        const App = () => {
+          const [cart, setCart] = useState([]);
+          const [isCartOpen, setIsCartOpen] = useState(false);
+          const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+          const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+          const [orderNumber, setOrderNumber] = useState('');
+
+          const addToCart = (item) => {
+            const existingIndex = cart.findIndex(cartItem => cartItem._id === item._id);
+            if (existingIndex >= 0) {
+              const newCart = [...cart];
+              newCart[existingIndex].quantity += 1;
+              setCart(newCart);
+            } else {
+              setCart([...cart, { ...item, quantity: 1 }]);
+            }
+          };
+
+          const updateQuantity = (index, change) => {
+            const newCart = [...cart];
+            newCart[index].quantity += change;
+            if (newCart[index].quantity <= 0) {
+              newCart.splice(index, 1);
+            }
+            setCart(newCart);
+          };
+
+          const removeItem = (index) => {
+            const newCart = [...cart];
+            newCart.splice(index, 1);
+            setCart(newCart);
+          };
+
+          const clearCart = () => {
+            if (window.confirm('Are you sure you want to clear your cart?')) {
+              setCart([]);
+            }
+          };
+
+          const handleCheckout = () => {
+            setIsCartOpen(false);
+            setIsCheckoutOpen(true);
+          };
+
+          const submitOrder = async (customerInfo, notes) => {
+            try {
+              const orderData = {
+                items: cart.map(item => ({
+                  menuItemId: item._id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity
+                })),
+                customerInfo,
+                notes
+              };
+
+              const response = await fetch(`${API_BASE_URL}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+              });
+
+              if (!response.ok) throw new Error('Failed to place order');
+
+              const result = await response.json();
+              setOrderNumber(result.order.orderNumber);
+              setCart([]);
+              setIsCheckoutOpen(false);
+              setIsConfirmationOpen(true);
+            } catch (error) {
+              console.error('Error placing order:', error);
+              alert('Failed to place order. Please make sure the backend server is running.');
+            }
+          };
+
+          const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+          const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+          return (
+            <div className="min-h-screen bg-white">
+              <Navigation cartCount={cartCount} onCartToggle={() => setIsCartOpen(!isCartOpen)} />
+              <Hero />
+              <MenuSection onAddToCart={addToCart} />
+              <About />
+              <Contact />
+              <Footer />
+              <ShoppingCartComponent 
+                isOpen={isCartOpen}
+                onClose={() => setIsCartOpen(false)}
+                cart={cart}
+                onUpdateQuantity={updateQuantity}
+                onRemove={removeItem}
+                onClear={clearCart}
+                onCheckout={handleCheckout}
+              />
+              <CheckoutModal
+                isOpen={isCheckoutOpen}
+                onClose={() => setIsCheckoutOpen(false)}
+                cart={cart}
+                total={cartTotal}
+                onSubmitOrder={submitOrder}
+              />
+              <OrderConfirmationModal
+                isOpen={isConfirmationOpen}
+                onClose={() => setIsConfirmationOpen(false)}
+                orderNumber={orderNumber}
+              />
+            </div>
+          );
+        };
+
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
