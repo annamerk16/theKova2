@@ -17,6 +17,26 @@
         html {
             scroll-behavior: smooth;
         }
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 1s ease-out;
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -24,6 +44,16 @@
 
     <script type="text/babel">
         const { useState, useEffect } = React;
+
+        // API Configuration - Update this if your backend runs on a different port
+        const API_BASE_URL = 'http://localhost:5001/api';
+
+        // Icon Components (Simple versions)
+        const ShoppingCart = () => <span>🛒</span>;
+        const X = () => <span>✕</span>;
+        const Plus = () => <span>+</span>;
+        const Minus = () => <span>−</span>;
+        const Loader = () => <div className="animate-spin text-4xl">⌛</div>;
 
         // Navigation Component
         const Navigation = ({ cartCount, onCartToggle }) => {
@@ -35,7 +65,6 @@
                 <div className="flex justify-between items-center h-16">
                   <div className="text-2xl font-bold text-amber-600">The Kova</div>
                   
-                  {/* Desktop Navigation */}
                   <ul className="hidden md:flex space-x-8">
                     <li><a href="#home" className="text-amber-600 hover:text-amber-700 font-medium transition">Home</a></li>
                     <li><a href="#menu" className="text-amber-600 hover:text-amber-700 font-medium transition">Menu</a></li>
@@ -43,13 +72,12 @@
                     <li><a href="#contact" className="text-amber-600 hover:text-amber-700 font-medium transition">Contact</a></li>
                   </ul>
 
-                  {/* Cart Icon */}
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={onCartToggle}
                       className="relative text-amber-600 hover:scale-110 transition-transform text-2xl"
                     >
-                      🛒
+                      <ShoppingCart />
                       {cartCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                           {cartCount}
@@ -57,17 +85,15 @@
                       )}
                     </button>
 
-                    {/* Mobile Menu Button */}
                     <button 
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className="md:hidden text-amber-600"
+                      className="md:hidden text-amber-600 text-2xl"
                     >
                       ☰
                     </button>
                   </div>
                 </div>
 
-                {/* Mobile Navigation */}
                 {isMenuOpen && (
                   <ul className="md:hidden pb-4 space-y-2">
                     <li><a href="#home" className="block text-amber-600 hover:text-amber-700 py-2" onClick={() => setIsMenuOpen(false)}>Home</a></li>
@@ -81,7 +107,7 @@
           );
         };
 
-        // Hero Section Component
+        // Hero Section
         const Hero = () => {
           return (
             <section id="home" className="h-screen flex items-center justify-center text-center text-white bg-cover bg-center relative mt-16" 
@@ -94,122 +120,68 @@
           );
         };
 
-        // Gallery Component
-        const Gallery = () => {
-          const [currentSlide, setCurrentSlide] = useState(0);
-          const images = [
-            { src: 'https://thekovanyc.com/photos/eggs.JPG', alt: 'Eggs' },
-            { src: 'https://thekovanyc.com/photos/latte.JPG', alt: 'Coffee' },
-            { src: 'https://thekovanyc.com/photos/pancake.JPG', alt: 'Pancakes' },
-            { src: 'https://thekovanyc.com/photos/bec.JPG', alt: 'Burger' },
-            { src: 'https://media-cdn.grubhub.com/image/upload/d_search:browse-images:default.jpg/w_1200,q_auto,fl_lossy,dpr_auto,c_fill,f_auto,h_800,g_auto/srr4kaz15iieqfmghejd', alt: 'Lots of food' },
-            { src: 'https://d1ralsognjng37.cloudfront.net/ba431089-b764-48b7-946b-a24619dbe75b.jpeg', alt: 'Beef roti' }
-          ];
-
-          const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % images.length);
-          const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length);
-
-          return (
-            <section id="gallery" className="py-16 px-4">
-              <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Gallery</h2>
-              <div className="max-w-4xl mx-auto relative rounded-2xl overflow-hidden shadow-2xl">
-                <div className="relative h-96 md:h-[500px]">
-                  <img 
-                    src={images[currentSlide].src} 
-                    alt={images[currentSlide].alt}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <button 
-                  onClick={prevSlide}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full transition text-2xl"
-                >
-                  ←
-                </button>
-                <button 
-                  onClick={nextSlide}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full transition text-2xl"
-                >
-                  →
-                </button>
-
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {images.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentSlide(idx)}
-                      className={`w-3 h-3 rounded-full transition ${idx === currentSlide ? 'bg-amber-600' : 'bg-gray-300'}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-          );
-        };
-
-        // Menu Component
+        // Menu Section with API Integration
         const MenuSection = ({ onAddToCart }) => {
-          const menuCategories = [
-            {
-              name: "Egg Dishes",
-              items: [
-                { name: "Mushroom & Onion Omelette", price: 12 },
-                { name: "Spinach & Cheese Omelette", price: 12 },
-                { name: "Egg Florentine", price: 13 },
-                { name: "Eggs Benedict", price: 13 },
-                { name: "Eggs Royale", price: 13 }
-              ]
-            },
-            {
-              name: "Sweet & Savory",
-              items: [
-                { name: "Pancakes", price: 12.50 },
-                { name: "French Toast", price: 12.50 },
-                { name: "Belgian Waffles with Nutella", price: 12.50 },
-                { name: "Fruit Salad", price: 8 },
-                { name: "Green Salad", price: 7.50 }
-              ]
-            },
-            {
-              name: "Burgers & Sandwiches",
-              items: [
-                { name: "Bacon, Egg, and Cheese", price: 8.50 },
-                { name: "Fried Chicken Sandwich", price: 13.50 },
-                { name: "Sriracha Jam Grilled Cheese", price: 6.50 },
-                { name: "Cheeseburger", price: 15 }
-              ]
-            },
-            {
-              name: "Roti & Sides",
-              items: [
-                { name: "Beef Roti", price: 13 },
-                { name: "Chicken Roti", price: 13 },
-                { name: "Sweet Potato Fries", price: 7 },
-                { name: "Spicy Hand Cut Fries", price: 7 },
-                { name: "Hand Cut Fries", price: 6 }
-              ]
-            },
-            {
-              name: "Drinks",
-              items: [
-                { name: "Espresso", price: 3.25 },
-                { name: "Latte", price: 3.25 },
-                { name: "Cappuccino", price: 4.25 },
-                { name: "Matcha Latte", price: 5.50 },
-                { name: "Chai Latte", price: 5.50 }
-              ]
-            },
-            {
-              name: "Specials",
-              items: [
-                { name: "The Kova Breakfast", price: 15 },
-                { name: "The Kova Latte", price: 6 },
-                { name: "Homemade Hibiscus Lemonade", price: 5 },
-                { name: "Homemade Lavender Lemonade", price: 5 }
-              ]
+          const [menuCategories, setMenuCategories] = useState([]);
+          const [loading, setLoading] = useState(true);
+          const [error, setError] = useState(null);
+
+          useEffect(() => {
+            fetchMenu();
+          }, []);
+
+          const fetchMenu = async () => {
+            try {
+              setLoading(true);
+              const response = await fetch(`${API_BASE_URL}/menu`);
+              if (!response.ok) {
+                throw new Error('Failed to fetch menu');
+              }
+              const data = await response.json();
+              setMenuCategories(data);
+              setError(null);
+            } catch (err) {
+              console.error('Error fetching menu:', err);
+              setError('Unable to load menu. Make sure the backend server is running on port 5000.');
+            } finally {
+              setLoading(false);
             }
-          ];
+          };
+
+          if (loading) {
+            return (
+              <section id="menu" className="py-16 px-4 bg-gray-50">
+                <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Our Menu</h2>
+                <div className="flex flex-col justify-center items-center h-64">
+                  <Loader />
+                  <p className="mt-4 text-gray-600">Loading menu...</p>
+                </div>
+              </section>
+            );
+          }
+
+          if (error) {
+            return (
+              <section id="menu" className="py-16 px-4 bg-gray-50">
+                <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Our Menu</h2>
+                <div className="max-w-2xl mx-auto text-center bg-red-50 p-8 rounded-lg border-2 border-red-200">
+                  <p className="text-red-600 mb-4 text-lg">{error}</p>
+                  <p className="text-sm text-gray-600 mb-4">Make sure to:</p>
+                  <ul className="text-left text-sm text-gray-600 mb-6 space-y-2">
+                    <li>✓ Start MongoDB: <code className="bg-gray-200 px-2 py-1 rounded">mongod</code></li>
+                    <li>✓ Start backend: <code className="bg-gray-200 px-2 py-1 rounded">npm run dev</code></li>
+                    <li>✓ Seed database: <code className="bg-gray-200 px-2 py-1 rounded">npm run seed</code></li>
+                  </ul>
+                  <button 
+                    onClick={fetchMenu}
+                    className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
+              </section>
+            );
+          }
 
           return (
             <section id="menu" className="py-16 px-4 bg-gray-50">
@@ -227,9 +199,12 @@
                             <span className="font-medium">{item.name}</span>
                             <span className="text-amber-600 font-bold">${item.price.toFixed(2)}</span>
                           </div>
+                          {item.description && (
+                            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                          )}
                           <button 
                             onClick={() => onAddToCart(item)}
-                            className="w-full bg-amber-600 text-white py-2 rounded-lg hover:bg-amber-700 transition font-semibold"
+                            className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition font-semibold text-sm"
                           >
                             Add to Cart
                           </button>
@@ -243,112 +218,8 @@
           );
         };
 
-        // About Section Component
-        const About = () => {
-          return (
-            <section id="about" className="py-16 px-4">
-              <div className="max-w-4xl mx-auto text-center">
-                <h2 className="text-4xl font-bold text-amber-600 mb-8">About The Kova</h2>
-                <p className="text-lg leading-relaxed mb-6">
-                  Warm, relaxed, and cozy venue for breakfast staples like pancakes and omelets, burgers and fried chicken sandwiches.
-                </p>
-                <p className="text-lg leading-relaxed mb-6">
-                  After opening in 2020, The Kova has been dedicated to delivering quality food at an affordable price. $20 food in this economy? Absolutely not. Nothing over $15 at our establishment!
-                </p>
-                <div className="bg-amber-50 rounded-xl p-8 mt-8">
-                  <h3 className="text-2xl font-bold text-amber-600 mb-4">Our Philosophy</h3>
-                  <p className="text-lg leading-relaxed">
-                    At The Kova, we believe that everyone should be able to treat themselves to good food every once in a while, or perhaps even every day. We vow to never raise our prices because we love our community! ❤️
-                  </p>
-                </div>
-              </div>
-            </section>
-          );
-        };
-
-        // Contact Section Component
-        const Contact = () => {
-          const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
-
-          const handleSubmit = (e) => {
-            e.preventDefault();
-            alert('Thank you for your message! We will get back to you soon.');
-            setFormData({ name: '', email: '', phone: '', message: '' });
-          };
-
-          return (
-            <section id="contact" className="py-16 px-4 bg-gray-50">
-              <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Contact Us</h2>
-              <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="rounded-xl overflow-hidden h-96 shadow-lg">
-                  <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3029.9317719426526!2d-74.10410639999999!3d40.587261399999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa735a70bfd%3A0x63575e101ad7db65!2sThe%20KOVA!5e0!3m2!1sen!2sus!4v1759699689691!5m2!1sen!2sus"
-                    width="100%" 
-                    height="100%" 
-                    style={{border:0}} 
-                    allowFullScreen="" 
-                    loading="lazy"
-                    title="The Kova Location"
-                  />
-                </div>
-                
-                <form onSubmit={handleSubmit} className="bg-white rounded-xl p-8 shadow-lg">
-                  <h3 className="text-2xl font-bold text-amber-600 mb-6">Send us a Message</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block font-medium mb-2">Name</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:border-amber-600 focus:outline-none transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium mb-2">Email</label>
-                      <input 
-                        type="email" 
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:border-amber-600 focus:outline-none transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium mb-2">Phone (Optional)</label>
-                      <input 
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:border-amber-600 focus:outline-none transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-medium mb-2">Message</label>
-                      <textarea 
-                        required
-                        value={formData.message}
-                        onChange={(e) => setFormData({...formData, message: e.target.value})}
-                        rows={5}
-                        className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:border-amber-600 focus:outline-none transition resize-none"
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      className="w-full bg-amber-600 text-white py-3 rounded-lg hover:bg-amber-700 transition font-bold text-lg"
-                    >
-                      Send Message
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </section>
-          );
-        };
-
         // Shopping Cart Component
-        const ShoppingCart = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, onClear }) => {
+        const ShoppingCartComponent = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, onClear, onCheckout }) => {
           const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
           if (!isOpen) return null;
@@ -360,7 +231,7 @@
                 <div className="bg-amber-50 p-6 border-b-2 border-amber-600 flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-amber-600">Your Cart</h2>
                   <button onClick={onClose} className="text-amber-600 hover:rotate-90 transition-transform text-3xl">
-                    ×
+                    <X />
                   </button>
                 </div>
 
@@ -384,14 +255,14 @@
                                 disabled={item.quantity === 1}
                                 className="bg-amber-600 text-white w-7 h-7 rounded hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
                               >
-                                −
+                                <Minus />
                               </button>
                               <span className="w-8 text-center font-bold">{item.quantity}</span>
                               <button 
                                 onClick={() => onUpdateQuantity(idx, 1)}
                                 className="bg-amber-600 text-white w-7 h-7 rounded hover:bg-amber-700 transition"
                               >
-                                +
+                                <Plus />
                               </button>
                             </div>
                             <button 
@@ -421,7 +292,7 @@
                         Clear Cart
                       </button>
                       <button 
-                        onClick={() => alert('Checkout functionality would be implemented here.')}
+                        onClick={onCheckout}
                         className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition font-semibold text-lg"
                       >
                         Checkout
@@ -434,58 +305,182 @@
           );
         };
 
-        // Footer Component
-        const Footer = () => {
+        // Checkout Modal
+        const CheckoutModal = ({ isOpen, onClose, cart, total, onSubmitOrder }) => {
+          const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', phone: '' });
+          const [notes, setNotes] = useState('');
+          const [isSubmitting, setIsSubmitting] = useState(false);
+
+          if (!isOpen) return null;
+
+          const handleSubmit = async (e) => {
+            e.preventDefault();
+            setIsSubmitting(true);
+            await onSubmitOrder(customerInfo, notes);
+            setIsSubmitting(false);
+          };
+
           return (
-            <footer className="bg-amber-50 text-gray-800 py-12 px-4">
-              <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
-                <div>
-                  <h3 className="text-xl font-bold text-amber-600 mb-4">Follow Us</h3>
-                  <div className="flex gap-4 justify-center md:justify-start text-2xl">
-                    <a href="https://www.facebook.com/thekovanyc/" className="text-amber-600 hover:text-amber-700 transition">
-                      📘
-                    </a>
-                    <a href="https://www.instagram.com/thekovanyc/" className="text-amber-600 hover:text-amber-700 transition">
-                      📷
-                    </a>
-                    <a href="https://www.tiktok.com/@thekovanyc" className="text-amber-600 hover:text-amber-700 transition">
-                      🎵
-                    </a>
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+              <div className="relative bg-white rounded-xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl">
+                  <X />
+                </button>
+
+                <h2 className="text-2xl font-bold text-amber-600 mb-6">Complete Your Order</h2>
+
+                <div className="mb-6 bg-amber-50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Order Summary</h3>
+                  {cart.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm mb-1">
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-amber-600 mt-2 pt-2 flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span className="text-amber-600">${total.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-bold text-amber-600 mb-4">Business Hours</h3>
-                  <ul className="space-y-1">
-                    <li>Monday: 9am - 4pm</li>
-                    <li>Tuesday: Closed</li>
-                    <li>Wednesday: 9am - 4pm</li>
-                    <li>Thursday: 9am - 4pm</li>
-                    <li>Friday: 9am - 4pm</li>
-                    <li>Saturday: 9am - 4pm</li>
-                    <li>Sunday: 9am - 4pm</li>
-                  </ul>
-                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Name *</label>
+                    <input type="text" required value={customerInfo.name}
+                      onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent" />
+                  </div>
 
-                <div>
-                  <h3 className="text-xl font-bold text-amber-600 mb-4">Contact Info</h3>
-                  <p>1775B Richmond Rd</p>
-                  <p>Staten Island, NY 10306</p>
-                  <p className="mt-2">Phone: (646) 577-5500</p>
-                  <p>Email: thekovanyc@gmail.com</p>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email *</label>
+                    <input type="email" required value={customerInfo.email}
+                      onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Phone *</label>
+                    <input type="tel" required value={customerInfo.phone}
+                      onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Special Instructions (Optional)</label>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-600 focus:border-transparent"
+                      placeholder="Any dietary restrictions or special requests?" />
+                  </div>
+
+                  <button type="submit" disabled={isSubmitting}
+                    className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition font-semibold text-lg disabled:bg-gray-400">
+                    {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                  </button>
+                </form>
               </div>
-            </footer>
+            </div>
           );
         };
 
-        // Main App Component
+        // Order Confirmation Modal
+        const OrderConfirmationModal = ({ isOpen, onClose, orderNumber }) => {
+          if (!isOpen) return null;
+
+          return (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70" />
+              <div className="relative bg-white rounded-xl p-8 max-w-md w-full text-center">
+                <div className="text-6xl mb-4">✅</div>
+                <h2 className="text-2xl font-bold text-green-600 mb-4">Order Placed Successfully!</h2>
+                <p className="text-gray-700 mb-2">Thank you for your order.</p>
+                <p className="text-sm text-gray-600 mb-6">
+                  Your order number is: <span className="font-bold text-amber-600">{orderNumber}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-6">We'll have your delicious food ready soon!</p>
+                <button onClick={onClose}
+                  className="bg-amber-600 text-white px-8 py-3 rounded-lg hover:bg-amber-700 transition font-semibold">
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        };
+
+        // Footer
+        // About Section
+        const About = () => (
+          <section id="about" className="py-16 px-4 bg-white">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-4xl font-bold text-amber-600 mb-8">About The Kova</h2>
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                Welcome to The Kova, your neighborhood destination for exceptional coffee, hearty breakfasts, and delightful brunch experiences. 
+                Located in the heart of Staten Island, we pride ourselves on serving fresh, delicious food made with love and the finest ingredients.
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed">
+                From our signature lattes to our famous Caribbean-style roti, every dish tells a story. 
+                Whether you're looking for a quick morning pick-me-up or a leisurely brunch with friends, 
+                The Kova is the perfect spot to relax, refuel, and reconnect.
+              </p>
+            </div>
+          </section>
+        );
+
+        // Contact Section
+        const Contact = () => (
+          <section id="contact" className="py-16 px-4 bg-gray-50">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-4xl font-bold text-center text-amber-600 mb-12">Get In Touch</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-amber-600 mb-4">Visit Us</h3>
+                  <p className="text-gray-700 mb-2">📍 1775B Richmond Rd</p>
+                  <p className="text-gray-700 mb-4">Staten Island, NY 10306</p>
+                  <p className="text-gray-700 mb-2">📞 (646) 577-5500</p>
+                  <p className="text-gray-700">✉️ thekovanyc@gmail.com</p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <h3 className="text-2xl font-bold text-amber-600 mb-4">Hours</h3>
+                  <ul className="space-y-2 text-gray-700">
+                    <li className="flex justify-between">
+                      <span>Monday</span>
+                      <span className="font-semibold">9am - 4pm</span>
+                    </li>
+                    <li className="flex justify-between text-red-600">
+                      <span>Tuesday</span>
+                      <span className="font-semibold">Closed</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span>Wed - Sun</span>
+                      <span className="font-semibold">9am - 4pm</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+
+        const Footer = () => (
+          <footer className="bg-amber-50 text-gray-800 py-12 px-4">
+            <div className="max-w-7xl mx-auto text-center">
+              <h3 className="text-xl font-bold text-amber-600 mb-4">The Kova</h3>
+              <p>1775B Richmond Rd, Staten Island, NY 10306</p>
+              <p>Phone: (646) 577-5500 | Email: thekovanyc@gmail.com</p>
+            </div>
+          </footer>
+        );
+
+        // Main App
         const App = () => {
           const [cart, setCart] = useState([]);
           const [isCartOpen, setIsCartOpen] = useState(false);
+          const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+          const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+          const [orderNumber, setOrderNumber] = useState('');
 
           const addToCart = (item) => {
-            const existingIndex = cart.findIndex(cartItem => cartItem.name === item.name);
+            const existingIndex = cart.findIndex(cartItem => cartItem._id === item._id);
             if (existingIndex >= 0) {
               const newCart = [...cart];
               newCart[existingIndex].quantity += 1;
@@ -516,45 +511,80 @@
             }
           };
 
+          const handleCheckout = () => {
+            setIsCartOpen(false);
+            setIsCheckoutOpen(true);
+          };
+
+          const submitOrder = async (customerInfo, notes) => {
+            try {
+              const orderData = {
+                items: cart.map(item => ({
+                  menuItemId: item._id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity
+                })),
+                customerInfo,
+                notes
+              };
+
+              const response = await fetch(`${API_BASE_URL}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+              });
+
+              if (!response.ok) throw new Error('Failed to place order');
+
+              const result = await response.json();
+              setOrderNumber(result.order.orderNumber);
+              setCart([]);
+              setIsCheckoutOpen(false);
+              setIsConfirmationOpen(true);
+            } catch (error) {
+              console.error('Error placing order:', error);
+              alert('Failed to place order. Please make sure the backend server is running.');
+            }
+          };
+
           const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+          const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
           return (
             <div className="min-h-screen bg-white">
               <Navigation cartCount={cartCount} onCartToggle={() => setIsCartOpen(!isCartOpen)} />
               <Hero />
-              <Gallery />
               <MenuSection onAddToCart={addToCart} />
               <About />
               <Contact />
               <Footer />
-              <ShoppingCart 
+              <ShoppingCartComponent 
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
                 cart={cart}
                 onUpdateQuantity={updateQuantity}
                 onRemove={removeItem}
                 onClear={clearCart}
+                onCheckout={handleCheckout}
               />
-              <style>{`
-                @keyframes fade-in-up {
-                  from {
-                    opacity: 0;
-                    transform: translateY(30px);
-                  }
-                  to {
-                    opacity: 1;
-                    transform: translateY(0);
-                  }
-                }
-                .animate-fade-in-up {
-                  animation: fade-in-up 1s ease-out;
-                }
-              `}</style>
+              <CheckoutModal
+                isOpen={isCheckoutOpen}
+                onClose={() => setIsCheckoutOpen(false)}
+                cart={cart}
+                total={cartTotal}
+                onSubmitOrder={submitOrder}
+              />
+              <OrderConfirmationModal
+                isOpen={isConfirmationOpen}
+                onClose={() => setIsConfirmationOpen(false)}
+                orderNumber={orderNumber}
+              />
             </div>
           );
         };
 
-        // Render the app
+        // Render
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
