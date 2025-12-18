@@ -14,6 +14,9 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve static files from public directory
+app.use(express.static('public'));
+
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kova-restaurant';
 
@@ -97,15 +100,9 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Root route
+// Serve frontend at root
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Welcome to The Kova Restaurant API',
-    endpoints: {
-      menu: '/api/menu',
-      orders: '/api/orders',
-    }
-  });
+  res.sendFile('index.html', { root: 'public' });
 });
 
 // Start server
